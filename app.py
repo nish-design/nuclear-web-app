@@ -2,6 +2,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from flask import Flask, request, jsonify, render_template
+import os
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -78,5 +79,6 @@ def predict():
     return jsonify(prediction)
 
 if __name__ == '__main__':
-    # For local testing
-    app.run(debug=True, port=7860)
+    # For Hugging Face Spaces deployment
+    port = int(os.environ.get("PORT", 7860))
+    app.run(host="0.0.0.0", port=port, debug=False)
