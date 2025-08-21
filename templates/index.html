@@ -3,111 +3,382 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuclear Mass & Binding Energy Predictor</title>
+    <title>Nuclear Data Explorer & Mass Predictor</title>
+    
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Pyodide for running Python in the browser -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+    
+    <!-- Chart.js for the N-Z plot -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; background-image: linear-gradient(to top right, #e0e7ff, #f0f9ff); }
-        h1, h2 { font-family: 'Roboto Slab', serif; }
-        .card { background-color: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
-        .loader { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #3b82f6; border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Custom styles for a more polished look */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: #f8fafc; /* Slate 50 */
+            background-image: radial-gradient(circle at 1px 1px, #334155 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+        .main-title {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6); /* Slate 800 with opacity */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5); /* Slate 700 with opacity */
+            border-radius: 1.5rem; /* rounded-3xl */
+        }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #38bdf8; /* Sky 400 */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-    <div class="w-full max-w-2xl space-y-8">
-        <div class="text-center">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">Nuclear Mass Predictor</h1>
-            <p class="text-gray-600 mt-2 text-lg">An AI-powered tool for nuclear physics</p>
-        </div>
+    <div class="container mx-auto max-w-6xl w-full">
+        <header class="text-center mb-8">
+            <h1 class="main-title text-4xl md:text-5xl font-bold text-sky-400 tracking-wider">Nuclear Data Explorer</h1>
+            <p class="text-slate-400 mt-2 text-lg">AI-Powered Mass Prediction & Nuclide Chart</p>
+        </header>
 
-        <div class="card rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="z-input" class="block text-sm font-medium text-gray-700 mb-1">Proton Number (Z)</label>
-                    <input type="number" id="z-input" placeholder="e.g., 8" class="w-full px-4 py-2 bg-white/50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+
+            <!-- Left Column: Controls and Results -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Input Card -->
+                <div class="glass-card p-6 shadow-2xl">
+                    <h2 class="text-2xl font-bold text-slate-100 mb-4 border-b border-slate-700 pb-2">Input Nucleus</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="z-input" class="block text-sm font-medium text-slate-300 mb-1">Protons (Z)</label>
+                            <input type="number" id="z-input" placeholder="e.g., 8" class="w-full bg-slate-900/50 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                        </div>
+                        <div>
+                            <label for="n-input" class="block text-sm font-medium text-slate-300 mb-1">Neutrons (N)</label>
+                            <input type="number" id="n-input" placeholder="e.g., 8" class="w-full bg-slate-900/50 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                        </div>
+                    </div>
+                    <button id="predict-btn" class="mt-6 w-full bg-sky-500 text-white font-bold py-3 rounded-lg hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-500 transition-transform transform hover:scale-105 duration-150 ease-in-out flex items-center justify-center space-x-2 disabled:bg-slate-600 disabled:cursor-not-allowed" disabled>
+                        <div id="btn-loader" class="loader hidden"></div>
+                        <span id="btn-text">Loading Environment...</span>
+                    </button>
+                    <div id="status-area" class="text-center h-6 mt-4 text-slate-400 text-sm"></div>
                 </div>
-                <div>
-                    <label for="n-input" class="block text-sm font-medium text-gray-700 mb-1">Neutron Number (N)</label>
-                    <input type="number" id="n-input" placeholder="e.g., 8" class="w-full px-4 py-2 bg-white/50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+
+                <!-- Results Card -->
+                <div id="results-area" class="glass-card p-6 shadow-2xl hidden opacity-0 transition-opacity duration-500">
+                    <h2 class="text-2xl font-bold text-slate-100 mb-4 border-b border-slate-700 pb-2">Prediction for <span id="nucleus-name" class="text-sky-400"></span></h2>
+                    <div class="space-y-4">
+                        <!-- Mass Excess -->
+                        <div>
+                            <h3 class="font-semibold text-slate-300">Mass Excess (MeV)</h3>
+                            <div class="grid grid-cols-2 gap-2 mt-1">
+                                <div class="bg-slate-900/70 p-3 rounded-lg text-center">
+                                    <p class="text-xs text-sky-400">Predicted</p>
+                                    <p id="result-mass" class="text-xl font-semibold">-</p>
+                                </div>
+                                <div class="bg-slate-900/70 p-3 rounded-lg text-center">
+                                    <p class="text-xs text-green-400">Experimental</p>
+                                    <p id="exp-mass" class="text-xl font-semibold">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Binding Energy -->
+                        <div>
+                            <h3 class="font-semibold text-slate-300">Binding Energy (MeV)</h3>
+                            <div class="grid grid-cols-2 gap-2 mt-1">
+                                <div class="bg-slate-900/70 p-3 rounded-lg text-center">
+                                    <p class="text-xs text-sky-400">Predicted</p>
+                                    <p id="result-binding" class="text-xl font-semibold">-</p>
+                                </div>
+                                <div class="bg-slate-900/70 p-3 rounded-lg text-center">
+                                    <p class="text-xs text-green-400">Experimental</p>
+                                    <p id="exp-binding" class="text-xl font-semibold">-</p>
+                                </div>
+                            </div>
+                        </div>
+                         <!-- B/A -->
+                        <div>
+                            <h3 class="font-semibold text-slate-300">Binding Energy per Nucleon (MeV)</h3>
+                            <div class="grid grid-cols-2 gap-2 mt-1">
+                                <div class="bg-slate-900/70 p-3 rounded-lg text-center">
+                                    <p class="text-xs text-sky-400">Predicted</p>
+                                    <p id="result-ba" class="text-xl font-semibold">-</p>
+                                </div>
+                                <div class="bg-slate-900/70 p-3 rounded-lg text-center">
+                                    <p class="text-xs text-green-400">Experimental</p>
+                                    <p id="exp-ba" class="text-xl font-semibold">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <button id="predict-btn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 duration-150 ease-in-out flex items-center justify-center space-x-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                <span>Calculate</span>
-            </button>
-        </div>
 
-        <div id="status-area" class="text-center h-10"></div>
-        <div id="results-area" class="hidden opacity-0 transition-opacity duration-500 bg-white/70 backdrop-filter backdrop-blur-sm border border-gray-200 p-6 rounded-2xl shadow-xl space-y-4">
-            <h2 class="text-2xl font-bold text-center text-gray-800">Prediction Results</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
-                <div class="bg-white/80 p-4 rounded-lg shadow-md"><p class="text-sm text-gray-500">Nucleus (Z, N, A)</p><p id="result-nucleus" class="text-2xl font-semibold text-blue-600">-</p></div>
-                <div class="bg-white/80 p-4 rounded-lg shadow-md"><p class="text-sm text-gray-500">Mass Excess (MeV)</p><p id="result-mass" class="text-2xl font-semibold text-blue-600">-</p></div>
-                <div class="bg-white/80 p-4 rounded-lg shadow-md"><p class="text-sm text-gray-500">Binding Energy (MeV)</p><p id="result-binding" class="text-2xl font-semibold text-blue-600">-</p></div>
-                <div class="bg-white/80 p-4 rounded-lg shadow-md"><p class="text-sm text-gray-500">B/A (MeV)</p><p id="result-ba" class="text-2xl font-semibold text-blue-600">-</p></div>
+            <!-- Right Column: N-Z Chart -->
+            <div class="lg:col-span-3 glass-card p-6 shadow-2xl">
+                <h2 class="text-2xl font-bold text-slate-100 mb-4 text-center">Chart of the Nuclides</h2>
+                <div class="relative h-[450px] md:h-[550px]">
+                    <canvas id="nz-chart"></canvas>
+                </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <script>
-        // This URL points to the '/predict' route on the SAME server.
-        const BACKEND_URL = "/predict";
-
+        // --- DOM ELEMENT REFERENCES ---
         const predictBtn = document.getElementById('predict-btn');
+        const btnLoader = document.getElementById('btn-loader');
+        const btnText = document.getElementById('btn-text');
         const zInput = document.getElementById('z-input');
         const nInput = document.getElementById('n-input');
         const statusArea = document.getElementById('status-area');
         const resultsArea = document.getElementById('results-area');
+        const chartCanvas = document.getElementById('nz-chart');
 
-        function showStatus(message, isError = false, showLoader = false) {
-            resultsArea.classList.add('hidden');
-            resultsArea.classList.remove('opacity-100');
-            let loaderHTML = showLoader ? '<div class="loader mx-auto"></div>' : '';
-            statusArea.innerHTML = `${loaderHTML}<p class="mt-2 ${isError ? 'text-red-600 font-semibold' : 'text-gray-600'}">${message}</p>`;
+        // --- GLOBAL STATE ---
+        let pyodide = null;
+        let pythonApi = null;
+        let nzChart = null;
+
+        // --- EXPERIMENTAL DATA (SAMPLE) ---
+        // In a real application, this would come from an API or a larger data file.
+        // This is a small sample for demonstration.
+        // Data format: "Z-N": { mass_excess_mev: value }
+        const experimentalData = {
+            "1-1": { mass_excess_mev: 13.13572 }, // Deuterium
+            "2-2": { mass_excess_mev: 2.42491 },  // Helium-4
+            "6-6": { mass_excess_mev: 0.0 },      // Carbon-12 (by definition)
+            "8-8": { mass_excess_mev: -4.73700 }, // Oxygen-16
+            "26-30": { mass_excess_mev: -60.604 },// Iron-56
+            "92-146": { mass_excess_mev: 42.998 } // Uranium-238
+        };
+        const PROTON_MASS_MEV = 7.28897;
+        const NEUTRON_MASS_MEV = 8.07131;
+
+        // --- CHARTING LOGIC ---
+        function createChart() {
+            // A small sample of stable/long-lived isotopes to populate the chart
+            const stableNuclides = [
+                {x: 1, y: 0}, {x: 1, y: 1}, {x: 2, y: 2}, {x: 3, y: 4}, {x: 4, y: 5},
+                {x: 6, y: 6}, {x: 7, y: 7}, {x: 8, y: 8}, {x: 10, y: 10}, {x: 12, y: 12},
+                {x: 14, y: 14}, {x: 16, y: 16}, {x: 20, y: 20}, {x: 26, y: 30}, {x: 30, y: 35},
+                {x: 40, y: 50}, {x: 50, y: 68}, {x: 60, y: 84}, {x: 70, y: 100}, {x: 82, y: 126},
+                {x: 92, y: 146}
+            ];
+
+            const ctx = chartCanvas.getContext('2d');
+            nzChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Valley of Stability',
+                            data: stableNuclides,
+                            backgroundColor: 'rgba(51, 65, 85, 0.7)', // Slate-700
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: 'Prediction',
+                            data: [],
+                            backgroundColor: '#38bdf8', // Sky-400
+                            pointRadius: 8,
+                            pointHoverRadius: 10,
+                            borderColor: '#f8fafc', // Slate-50
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: { display: true, text: 'Proton Number (Z)', color: '#cbd5e1' },
+                            grid: { color: 'rgba(51, 65, 85, 0.5)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Neutron Number (N)', color: '#cbd5e1' },
+                            grid: { color: 'rgba(51, 65, 85, 0.5)' },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: '#cbd5e1' }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` (Z=${context.raw.x}, N=${context.raw.y})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart(z, n) {
+            if (nzChart) {
+                nzChart.data.datasets[1].data = [{ x: z, y: n }];
+                nzChart.update();
+            }
+        }
+
+        // --- PYODIDE & PREDICTION LOGIC ---
+        function showStatus(message, isError = false) {
+            statusArea.textContent = message;
+            statusArea.className = isError ? 'text-red-400' : 'text-slate-400';
+        }
+
+        async function initializePyodide() {
+            try {
+                pyodide = await loadPyodide();
+                showStatus('Loading Python packages...');
+                btnText.textContent = 'Loading Packages...';
+                await pyodide.loadPackage(['numpy', 'pandas', 'scikit-learn', 'joblib']);
+
+                showStatus('Loading prediction model...');
+                btnText.textContent = 'Loading Model...';
+                
+                // Fetch your Python script (make sure main.py is in the same folder)
+                const mainPyResponse = await fetch('./main.py');
+                if (!mainPyResponse.ok) throw new Error("Failed to load main.py. Make sure it's in the same directory.");
+                const mainPyCode = await mainPyResponse.text();
+                pyodide.runPython(mainPyCode);
+                
+                // Fetch your joblib model bundle
+                const bundleResponse = await fetch('./prediction_bundle.joblib');
+                if (!bundleResponse.ok) throw new Error("Failed to load prediction_bundle.joblib. Make sure it's in the same directory.");
+                const bundleBuffer = await bundleResponse.arrayBuffer();
+                
+                pythonApi = pyodide.globals.get('__main__');
+                pythonApi.load_bundle_from_memory(bundleBuffer);
+
+                btnText.textContent = 'Predict';
+                btnLoader.classList.add('hidden');
+                predictBtn.disabled = false;
+                showStatus('Ready to predict.');
+
+            } catch (error) {
+                console.error(error);
+                btnText.textContent = 'Initialization Failed';
+                showStatus(`Error: ${error.message}`, true);
+            }
         }
 
         async function handlePrediction() {
             const z = parseInt(zInput.value);
             const n = parseInt(nInput.value);
 
-            if (isNaN(z) || isNaN(n)) {
-                showStatus('Please enter valid integer values for Z and N.', true);
+            if (isNaN(z) || isNaN(n) || z < 0 || n < 0) {
+                showStatus('Please enter valid, non-negative integers for Z and N.', true);
                 return;
             }
             
-            showStatus('Contacting server...', false, true);
-
+            predictBtn.disabled = true;
+            btnText.textContent = 'Calculating...';
+            btnLoader.classList.remove('hidden');
+            showStatus('Running AI prediction...');
+            
             try {
-                const response = await fetch(BACKEND_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ z: z, n: n }),
-                });
+                // Run prediction using the Python function in Pyodide
+                const resultProxy = pythonApi.get_prediction(z, n);
+                const result = resultProxy.toJs({ dict_converter: Object.fromEntries });
+                resultProxy.destroy();
 
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'An unknown error occurred.');
-                
-                document.getElementById('result-nucleus').textContent = `(${data.Z}, ${data.N}, ${data.A})`;
-                document.getElementById('result-mass').textContent = `${data.Corrected_Mass_Excess_MeV.toFixed(4)}`;
-                document.getElementById('result-binding').textContent = `${data.Binding_Energy_MeV.toFixed(4)}`;
-                document.getElementById('result-ba').textContent = `${data.Binding_Energy_per_Nucleon_MeV.toFixed(4)}`;
-                
-                statusArea.innerHTML = '';
-                resultsArea.classList.remove('hidden');
-                setTimeout(() => resultsArea.classList.add('opacity-100'), 10);
+                // Display results
+                displayResults(result);
+                updateChart(z, n);
 
             } catch (error) {
-                showStatus(`Error: ${error.message}`, true);
+                console.error(error);
+                showStatus(`Prediction Error: ${error}`, true);
+                // Hide results area on error
+                resultsArea.classList.add('hidden', 'opacity-0');
+            } finally {
+                predictBtn.disabled = false;
+                btnText.textContent = 'Predict';
+                btnLoader.classList.add('hidden');
             }
         }
 
+        function displayResults(predicted) {
+            const z = predicted.Z;
+            const n = predicted.N;
+            const a = predicted.A;
+            const key = `${z}-${n}`;
+            const expData = experimentalData[key];
+
+            // Update nucleus name
+            document.getElementById('nucleus-name').textContent = `(Z=${z}, N=${n}, A=${a})`;
+
+            // --- Predicted Values ---
+            const predMass = predicted.Corrected_Mass_Excess_MeV;
+            const predBinding = predicted.Binding_Energy_MeV;
+            const predBA = predicted.Binding_Energy_per_Nucleon_MeV;
+            
+            document.getElementById('result-mass').textContent = predMass.toFixed(4);
+            document.getElementById('result-binding').textContent = predBinding.toFixed(4);
+            document.getElementById('result-ba').textContent = predBA.toFixed(4);
+
+            // --- Experimental Values ---
+            if (expData) {
+                const expMass = expData.mass_excess_mev;
+                // Calculate binding energy from mass excess: BE = Z*mp + N*mn - M
+                // where masses are expressed as mass excesses.
+                const expBinding = (z * PROTON_MASS_MEV) + (n * NEUTRON_MASS_MEV) - expMass;
+                const expBA = expBinding / a;
+
+                document.getElementById('exp-mass').textContent = expMass.toFixed(4);
+                document.getElementById('exp-binding').textContent = expBinding.toFixed(4);
+                document.getElementById('exp-ba').textContent = expBA.toFixed(4);
+            } else {
+                document.getElementById('exp-mass').textContent = 'N/A';
+                document.getElementById('exp-binding').textContent = 'N/A';
+                document.getElementById('exp-ba').textContent = 'N/A';
+            }
+            
+            showStatus('Prediction complete.');
+            resultsArea.classList.remove('hidden');
+            setTimeout(() => resultsArea.classList.remove('opacity-0'), 10);
+        }
+
+        // --- EVENT LISTENERS & INITIALIZATION ---
         predictBtn.addEventListener('click', handlePrediction);
         nInput.addEventListener('keyup', (event) => { if (event.key === 'Enter') predictBtn.click(); });
         zInput.addEventListener('keyup', (event) => { if (event.key === 'Enter') nInput.focus(); });
+        
+        // Initialize the application
+        window.onload = () => {
+            createChart();
+            initializePyodide();
+        };
     </script>
 </body>
 </html>
